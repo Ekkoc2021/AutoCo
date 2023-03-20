@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+// 命令行直接启动不附带参数，则将使用默认的账号密码完成连接
+var user string = "0921****" //默认账号
+var password string = "****" //默认密码
+
 func main() {
 	log.Println(
 		"\n---------------------小E-v1.1----------------------------------\n" +
@@ -38,8 +42,6 @@ func main() {
 	}
 }
 
-var user string = "0921****" //自定义默认账号
-var password string = "****" //自定义默认密码
 
 func analysis() bool {
 	if len(os.Args) == 1 {

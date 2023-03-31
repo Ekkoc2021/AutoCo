@@ -167,7 +167,6 @@ func verify2(user string, password string, yysN int) Resp {
 	}
 
 	client := &http.Client{Transport: tr}
-	//req, err := http.NewRequest("GET", "http://10.2.5.251:801/eportal/?c=Portal&a=login&callback=dr1678184325643&login_method=1&user_account=09213643%40unicom&user_password=bv623977&wlan_user_ip=10.3.221.67&wlan_user_mac=14857fcc574f&wlan_ac_ip=&wlan_ac_name=NAS&jsVersion=3.0&_=1678184294511", nil)
 
 	yysS := yys[yysN] //通过传入的运营商的索引获取对应的运营商
 

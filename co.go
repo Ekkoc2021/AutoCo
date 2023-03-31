@@ -14,9 +14,9 @@ import (
 	"time"
 )
 
-var defaultUser string = "09213643"     //自定义默认账号
-var defaultPassword string = "bv623977" //自定义默认密码
-var defaultYysC int = 1                 //自定义运营商
+var defaultUser string = "0921***" //自定义默认账号
+var defaultPassword string = "***" //自定义默认密码
+var defaultYysC int = 1            //自定义运营商
 /*
 移动:cmcc
 联通:unicom

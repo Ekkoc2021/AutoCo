@@ -30,8 +30,7 @@ func main() {
 			"| 使用参数usage查看具体命令行使用详情,如: co usage|\n" +
 			"| 欢迎提issue:https://github.com/Ekkoc2021/AutoCo |" +
 			"\n---------------------------------------------------")
-	isv := analysis()
-	for !isv {
+	for !analysis() {
 		log.Print("输入1重新尝试，输入其他退出程序！")
 		var input string
 		fmt.Scan(&input)

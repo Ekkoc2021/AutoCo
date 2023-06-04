@@ -1,6 +1,7 @@
 package main
 
 import (
+	login "AutoCo/login"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -14,9 +15,10 @@ import (
 	"time"
 )
 
-var defaultUser string = "0921***" //自定义默认账号
-var defaultPassword string = "***" //自定义默认密码
-var defaultYysC int = 1            //自定义运营商
+var defaultYysC int = 1 //自定义运营商
+var filename = "info.json"
+var info = login.LoginInfo{}
+
 /*
 移动:cmcc
 联通:unicom
@@ -26,18 +28,38 @@ var yys [3]string = [3]string{"cmcc", "unicom", "telecom"}
 
 func main() {
 	fmt.Println(
-		"--------------欢迎使用:AutoCo v2.0-----------------\n" +
+		"--------------欢迎使用:AutoCo v2.1-----------------\n" +
 			"| 使用参数usage查看具体命令行使用详情,如: co usage|\n" +
-			"| 欢迎提issue:https://github.com/Ekkoc2021/AutoCo |" +
+			"| GitHub：https://github.com/Ekkoc2021/AutoCo |\n" +
+			"| 反馈邮箱：189890049@qq.com                  |" +
 			"\n---------------------------------------------------")
 	for !analysis() {
-		log.Print("输入1重新尝试，输入其他退出程序！")
+		log.Print("输入 1 ：重新尝试登录，输入 2 ：修改默认账号密码，输入其他退出程序！")
 		var input string
+		fmt.Print("请输入：")
 		fmt.Scan(&input)
-		if input != "1" {
+		if input != "1" && input != "2" {
 			os.Exit(0)
 		}
+		if input == "2" {
+			info.Update(filename)
+		}
 	}
+}
+
+// 完成通过文件登录的逻辑,最终返回一个登录数据集:数据不正确,第一次登录要求向文件中数据,同时修改默认的登录密码账号
+func loginWithFile(filename string) {
+	// 读取数据
+	info.ReadInfoInFile(filename)
+
+	//初步校验数据
+	for !info.DataIsRight() {
+		//数据格式不正确:更新数据
+		log.Println(":第一次运行或者运营商输入不在范围内!")
+		info.Update(filename)
+	}
+	//更新完毕:运营商映射问题()
+	defaultYysC = info.GetYysCode()
 }
 
 /*
@@ -45,8 +67,11 @@ func main() {
 */
 func analysis() bool {
 	if len(os.Args) == 1 {
+		//使用默认数据登录
+		// 初始化默认数据
+		loginWithFile(filename)
 		// 默认是使用联通
-		return isVerify(defaultUser, defaultPassword, defaultYysC)
+		return isVerify(info.Username, info.Password, defaultYysC)
 	}
 	if len(os.Args) == 2 {
 		var commend string = os.Args[1]
@@ -57,13 +82,15 @@ func analysis() bool {
 		if !connect() { //切换wifi
 			return false
 		}
+		//使用默认数据登录
+		// 初始化默认数据
+		loginWithFile(filename)
 		//登录验证!
-		return isVerify(defaultUser, defaultPassword, defaultYysC)
-
+		return isVerify(info.Username, info.Password, defaultYysC)
 	}
 	if len(os.Args) == 4 {
-		defaultUser = os.Args[1]
-		defaultPassword = os.Args[2]
+		info.Username = os.Args[1]
+		info.Password = os.Args[2]
 		c, err := strconv.Atoi(os.Args[3])
 		if err != nil {
 			log.Println("命令错误,无法解析")
@@ -72,22 +99,21 @@ func analysis() bool {
 			os.Exit(0)
 		}
 		defaultYysC = mapping(c) //对c进行处理
-		return isVerify(defaultUser, defaultPassword, defaultYysC)
-
+		return isVerify(info.Username, info.Password, defaultYysC)
 	}
 	if len(os.Args) == 5 {
 		if !connect() { //切换wifi
 			return false
 		}
-		defaultUser = os.Args[2]
-		defaultPassword = os.Args[3]
+		info.Username = os.Args[2]
+		info.Password = os.Args[3]
 		c, err := strconv.Atoi(os.Args[4])
 		if err != nil {
 			usage()
 			os.Exit(0)
 		}
 		defaultYysC = mapping(c) //对c进行处理
-		return isVerify(defaultUser, defaultPassword, defaultYysC)
+		return isVerify(info.Username, info.Password, defaultYysC)
 	}
 	log.Println("命令错误,无法解析")
 	usage()
@@ -117,7 +143,7 @@ func usage() {
 	//列出用法
 	log.Println(
 		"命令行用法:\n" +
-			" 1,co 使用默认账号密码运营商进行连接\n" +
+			" 1,co 使用默认账号密码运营商进行连接，首次使用需要输入账号密码\n" +
 			" 2,co [1] 切换到cumt_stu并使用默认账号密码运营商进行连接\n" +
 			" 3,co [账号] [密码] [0~2] 指定账号密码运营商连接,0:移动,1:连通,2:电信\n" +
 			" 4,co [1] [账号] [密码] [0~2] 切换wifi到cumt_stu然后通过指定账号密码运营商连接,0:移动,1:连通,2:电信 \n")
@@ -160,21 +186,16 @@ type Resp struct {
 */
 func verify2(user string, password string, yysN int) Resp {
 	res := Resp{"0", "", "4"}
-
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-
 	client := &http.Client{Transport: tr}
-
 	yysS := yys[yysN] //通过传入的运营商的索引获取对应的运营商
-
 	req, err := http.NewRequest("GET", "http://10.2.5.251:801/eportal/?c=Portal&a=login&login_method=1&user_account="+user+"%40"+yysS+"&user_password="+password, nil)
 	if err != nil {
 		res.Msg = "未连接到CUMT_Stu"
 		return res
 	}
-
 	resp, err := client.Do(req)
 	if err != nil {
 		res.Msg = "未连接到CUMT_Stu"
@@ -222,7 +243,7 @@ func isVerify(user string, password string, yysN int) bool {
 	}
 
 	if resp.RetCode == "1" {
-		log.Println("账号不存在!可能是运营商,密码,账号错误")
+		log.Println("认证失败:可能是运营商,密码,账号错误!还可能是当前时段不允许上网!")
 		return false
 	}
 
